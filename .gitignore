@@ -174,3 +174,5 @@ rtdetrv2_pytorch/dataset/*
 !rtdetrv2_pytorch/dataset/yolov9_dataset_to_txt.py
 log.txt
 dataset.tar.gz
+*.engine
+*.profile
