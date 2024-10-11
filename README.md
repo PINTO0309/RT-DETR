@@ -1,4 +1,4 @@
-# This fork only has some parameters customized for learning Wholebody25.
+# This fork `train` branch only has some parameters customized for learning Wholebody25.
 
 ---
 
