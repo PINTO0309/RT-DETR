@@ -11,7 +11,7 @@ import torch.utils.data
 import torchvision
 torchvision.disable_beta_transforms_warning()
 
-from PIL import Image 
+from PIL import Image
 from pycocotools import mask as coco_mask
 
 from ._dataset import DetDataset
@@ -25,7 +25,7 @@ __all__ = ['CocoDetection']
 class CocoDetection(torchvision.datasets.CocoDetection, DetDataset):
     __inject__ = ['transforms', ]
     __share__ = ['remap_mscoco_category']
-    
+
     def __init__(self, img_folder, ann_file, transforms, return_masks=False, remap_mscoco_category=False):
         super(CocoDetection, self).__init__(img_folder, ann_file)
         self._transforms = transforms
@@ -59,7 +59,7 @@ class CocoDetection(torchvision.datasets.CocoDetection, DetDataset):
 
         if 'masks' in target:
             target['masks'] = convert_to_tv_tensor(target['masks'], key='masks')
-        
+
         return image, target
 
     def extra_repr(self) -> str:
@@ -69,7 +69,7 @@ class CocoDetection(torchvision.datasets.CocoDetection, DetDataset):
             s += f' transforms:\n   {repr(self._transforms)}'
         if hasattr(self, '_preset') and self._preset is not None:
             s += f' preset:\n   {repr(self._preset)}'
-        return s 
+        return s
 
     @property
     def categories(self, ):
@@ -131,7 +131,7 @@ class ConvertCocoPolysToMask(object):
             labels = [category2label[obj["category_id"]] for obj in anno]
         else:
             labels = [obj["category_id"] for obj in anno]
-            
+
         labels = torch.tensor(labels, dtype=torch.int64)
 
         if self.return_masks:
@@ -171,92 +171,120 @@ class ConvertCocoPolysToMask(object):
 
         target["orig_size"] = torch.as_tensor([int(w), int(h)])
         # target["size"] = torch.as_tensor([int(w), int(h)])
-    
+
         return image, target
 
 
+# mscoco_category2name = {
+#     1: 'person',
+#     2: 'bicycle',
+#     3: 'car',
+#     4: 'motorcycle',
+#     5: 'airplane',
+#     6: 'bus',
+#     7: 'train',
+#     8: 'truck',
+#     9: 'boat',
+#     10: 'traffic light',
+#     11: 'fire hydrant',
+#     13: 'stop sign',
+#     14: 'parking meter',
+#     15: 'bench',
+#     16: 'bird',
+#     17: 'cat',
+#     18: 'dog',
+#     19: 'horse',
+#     20: 'sheep',
+#     21: 'cow',
+#     22: 'elephant',
+#     23: 'bear',
+#     24: 'zebra',
+#     25: 'giraffe',
+#     27: 'backpack',
+#     28: 'umbrella',
+#     31: 'handbag',
+#     32: 'tie',
+#     33: 'suitcase',
+#     34: 'frisbee',
+#     35: 'skis',
+#     36: 'snowboard',
+#     37: 'sports ball',
+#     38: 'kite',
+#     39: 'baseball bat',
+#     40: 'baseball glove',
+#     41: 'skateboard',
+#     42: 'surfboard',
+#     43: 'tennis racket',
+#     44: 'bottle',
+#     46: 'wine glass',
+#     47: 'cup',
+#     48: 'fork',
+#     49: 'knife',
+#     50: 'spoon',
+#     51: 'bowl',
+#     52: 'banana',
+#     53: 'apple',
+#     54: 'sandwich',
+#     55: 'orange',
+#     56: 'broccoli',
+#     57: 'carrot',
+#     58: 'hot dog',
+#     59: 'pizza',
+#     60: 'donut',
+#     61: 'cake',
+#     62: 'chair',
+#     63: 'couch',
+#     64: 'potted plant',
+#     65: 'bed',
+#     67: 'dining table',
+#     70: 'toilet',
+#     72: 'tv',
+#     73: 'laptop',
+#     74: 'mouse',
+#     75: 'remote',
+#     76: 'keyboard',
+#     77: 'cell phone',
+#     78: 'microwave',
+#     79: 'oven',
+#     80: 'toaster',
+#     81: 'sink',
+#     82: 'refrigerator',
+#     84: 'book',
+#     85: 'clock',
+#     86: 'vase',
+#     87: 'scissors',
+#     88: 'teddy bear',
+#     89: 'hair drier',
+#     90: 'toothbrush'
+# }
 mscoco_category2name = {
-    1: 'person',
-    2: 'bicycle',
-    3: 'car',
-    4: 'motorcycle',
-    5: 'airplane',
-    6: 'bus',
-    7: 'train',
-    8: 'truck',
-    9: 'boat',
-    10: 'traffic light',
-    11: 'fire hydrant',
-    13: 'stop sign',
-    14: 'parking meter',
-    15: 'bench',
-    16: 'bird',
-    17: 'cat',
-    18: 'dog',
-    19: 'horse',
-    20: 'sheep',
-    21: 'cow',
-    22: 'elephant',
-    23: 'bear',
-    24: 'zebra',
-    25: 'giraffe',
-    27: 'backpack',
-    28: 'umbrella',
-    31: 'handbag',
-    32: 'tie',
-    33: 'suitcase',
-    34: 'frisbee',
-    35: 'skis',
-    36: 'snowboard',
-    37: 'sports ball',
-    38: 'kite',
-    39: 'baseball bat',
-    40: 'baseball glove',
-    41: 'skateboard',
-    42: 'surfboard',
-    43: 'tennis racket',
-    44: 'bottle',
-    46: 'wine glass',
-    47: 'cup',
-    48: 'fork',
-    49: 'knife',
-    50: 'spoon',
-    51: 'bowl',
-    52: 'banana',
-    53: 'apple',
-    54: 'sandwich',
-    55: 'orange',
-    56: 'broccoli',
-    57: 'carrot',
-    58: 'hot dog',
-    59: 'pizza',
-    60: 'donut',
-    61: 'cake',
-    62: 'chair',
-    63: 'couch',
-    64: 'potted plant',
-    65: 'bed',
-    67: 'dining table',
-    70: 'toilet',
-    72: 'tv',
-    73: 'laptop',
-    74: 'mouse',
-    75: 'remote',
-    76: 'keyboard',
-    77: 'cell phone',
-    78: 'microwave',
-    79: 'oven',
-    80: 'toaster',
-    81: 'sink',
-    82: 'refrigerator',
-    84: 'book',
-    85: 'clock',
-    86: 'vase',
-    87: 'scissors',
-    88: 'teddy bear',
-    89: 'hair drier',
-    90: 'toothbrush'
+    1: 'body',
+    2: 'adult',
+    3: 'child',
+    4: 'male',
+    5: 'female',
+    6: 'body_with_wheelchair',
+    7: 'body_with_crutches',
+    8: 'head',
+    9: 'front',
+    10: 'right-front',
+    11: 'right-side',
+    12: 'right-back',
+    13: 'back',
+    14: 'left-back',
+    15: 'left-side',
+    16: 'left-front',
+    17: 'face',
+    18: 'eye',
+    19: 'nose',
+    20: 'mouth',
+    21: 'ear',
+    22: 'hand',
+    23: 'hand_left',
+    24: 'hand_right',
+    25: 'foot'
 }
+
 
 mscoco_category2label = {k: i for i, k in enumerate(mscoco_category2name.keys())}
 mscoco_label2category = {v: k for k, v in mscoco_category2label.items()}

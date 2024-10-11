@@ -1,6 +1,6 @@
 sync_bn: True
-find_unused_parameters: False
-
+# find_unused_parameters: False # RuntimeError: Expected to have finished reduction in the prior iteration before starting a new one. This error indicates that your module has parameters that were not used in producing loss. You can enable unused parameter detection by passing the keyword argument `find_unused_parameters=True` to `torch.nn.parallel.DistributedDataParallel`
+find_unused_parameters: True
 
 use_amp: False
 
