@@ -4,9 +4,9 @@
 import copy
 from collections import OrderedDict
 
-import torch 
-import torch.nn as nn 
-import torch.nn.functional as F 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 from .utils import get_activation
 
@@ -21,14 +21,14 @@ class ConvNormLayer(nn.Module):
     def __init__(self, ch_in, ch_out, kernel_size, stride, padding=None, bias=False, act=None):
         super().__init__()
         self.conv = nn.Conv2d(
-            ch_in, 
-            ch_out, 
-            kernel_size, 
-            stride, 
-            padding=(kernel_size-1)//2 if padding is None else padding, 
+            ch_in,
+            ch_out,
+            kernel_size,
+            stride,
+            padding=(kernel_size-1)//2 if padding is None else padding,
             bias=bias)
         self.norm = nn.BatchNorm2d(ch_out)
-        self.act = nn.Identity() if act is None else get_activation(act) 
+        self.act = nn.Identity() if act is None else get_activation(act)
 
     def forward(self, x):
         return self.act(self.norm(self.conv(x)))
@@ -41,7 +41,7 @@ class RepVggBlock(nn.Module):
         self.ch_out = ch_out
         self.conv1 = ConvNormLayer(ch_in, ch_out, 3, 1, padding=1, act=None)
         self.conv2 = ConvNormLayer(ch_in, ch_out, 1, 1, padding=0, act=None)
-        self.act = nn.Identity() if act is None else get_activation(act) 
+        self.act = nn.Identity() if act is None else get_activation(act)
 
     def forward(self, x):
         if hasattr(self, 'conv'):
@@ -57,12 +57,12 @@ class RepVggBlock(nn.Module):
 
         kernel, bias = self.get_equivalent_kernel_bias()
         self.conv.weight.data = kernel
-        self.conv.bias.data = bias 
+        self.conv.bias.data = bias
 
     def get_equivalent_kernel_bias(self):
         kernel3x3, bias3x3 = self._fuse_bn_tensor(self.conv1)
         kernel1x1, bias1x1 = self._fuse_bn_tensor(self.conv2)
-        
+
         return kernel3x3 + self._pad_1x1_to_3x3_tensor(kernel1x1), bias3x3 + bias1x1
 
     def _pad_1x1_to_3x3_tensor(self, kernel1x1):
@@ -134,7 +134,7 @@ class TransformerEncoderLayer(nn.Module):
         self.norm2 = nn.LayerNorm(d_model)
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
-        self.activation = get_activation(activation) 
+        self.activation = get_activation(activation)
 
     @staticmethod
     def with_pos_embed(tensor, pos_embed):
@@ -197,7 +197,7 @@ class HybridEncoder(nn.Module):
                  expansion=1.0,
                  depth_mult=1.0,
                  act='silu',
-                 eval_spatial_size=None, 
+                 eval_spatial_size=None,
                  version='v2'):
         super().__init__()
         self.in_channels = in_channels
@@ -206,10 +206,10 @@ class HybridEncoder(nn.Module):
         self.use_encoder_idx = use_encoder_idx
         self.num_encoder_layers = num_encoder_layers
         self.pe_temperature = pe_temperature
-        self.eval_spatial_size = eval_spatial_size        
+        self.eval_spatial_size = eval_spatial_size
         self.out_channels = [hidden_dim for _ in range(len(in_channels))]
         self.out_strides = feat_strides
-        
+
         # channel projection
         self.input_proj = nn.ModuleList()
         for in_channel in in_channels:
@@ -224,14 +224,14 @@ class HybridEncoder(nn.Module):
                 ]))
             else:
                 raise AttributeError()
-                
+
             self.input_proj.append(proj)
 
         # encoder transformer
         encoder_layer = TransformerEncoderLayer(
-            hidden_dim, 
+            hidden_dim,
             nhead=nhead,
-            dim_feedforward=dim_feedforward, 
+            dim_feedforward=dim_feedforward,
             dropout=dropout,
             activation=enc_act)
 
@@ -292,13 +292,15 @@ class HybridEncoder(nn.Module):
     def forward(self, feats):
         assert len(feats) == len(self.in_channels)
         proj_feats = [self.input_proj[i](feat) for i, feat in enumerate(feats)]
-        
+
         # encoder
         if self.num_encoder_layers > 0:
             for i, enc_ind in enumerate(self.use_encoder_idx):
                 h, w = proj_feats[enc_ind].shape[2:]
                 # flatten [B, C, H, W] to [B, HxW, C]
-                src_flatten = proj_feats[enc_ind].flatten(2).permute(0, 2, 1)
+                n,c,h,w = proj_feats[enc_ind].shape
+                # src_flatten = proj_feats[enc_ind].flatten(2).permute(0, 2, 1)
+                src_flatten = proj_feats[enc_ind].reshape([n,c,h*w]).permute(0, 2, 1)
                 if self.training or self.eval_spatial_size is None:
                     pos_embed = self.build_2d_sincos_position_embedding(
                         w, h, self.hidden_dim, self.pe_temperature).to(src_flatten.device)

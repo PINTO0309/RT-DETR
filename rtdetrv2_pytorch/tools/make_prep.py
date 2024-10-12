@@ -84,11 +84,32 @@ if __name__ == "__main__":
     model_onnx1 = onnx.load(onnx_file)
     model_onnx1 = onnx.shape_inference.infer_shapes(model_onnx1)
     onnx.save(model_onnx1, onnx_file)
-
     model_onnx2 = onnx.load(onnx_file)
     model_simp, check = simplify(model_onnx2)
     onnx.save(model_simp, onnx_file)
 
+    torch.onnx.export(
+        model,
+        args=(x),
+        f=f"{MODEL}_{'_'.join(map(str, INPUT_SHAPE))}_n_batch.onnx",
+        opset_version=OPSET,
+        input_names = ['input_bgr'],
+        output_names=['output_prep'],
+        dynamic_axes=\
+            {
+                'input_bgr': {
+                    0: 'N',
+                    2: 'H',
+                    3: 'W',
+                },
+            }
+    )
+    model_onnx1 = onnx.load(onnx_file)
+    model_onnx1 = onnx.shape_inference.infer_shapes(model_onnx1)
+    onnx.save(model_onnx1, onnx_file)
+    model_onnx2 = onnx.load(onnx_file)
+    model_simp, check = simplify(model_onnx2)
+    onnx.save(model_simp, onnx_file)
 
     from sor4onnx import rename
     rename(
@@ -98,7 +119,9 @@ if __name__ == "__main__":
         output_onnx_file_path=onnx_file,
     )
 
+    import os
     from snc4onnx import combine
+
     combine(
         input_onnx_file_paths = [
             onnx_file,
@@ -108,4 +131,14 @@ if __name__ == "__main__":
             ["output_prep", "images"]
         ],
         output_onnx_file_path=MODEL_BODY,
+    )
+    combine(
+        input_onnx_file_paths = [
+            f'{os.path.splitext(os.path.basename(onnx_file))[0]}_n_batch.onnx',
+            f'{os.path.splitext(os.path.basename(MODEL_BODY))[0]}_n_batch.onnx',
+        ],
+        srcop_destop = [
+            ["output_prep", "images"]
+        ],
+        output_onnx_file_path=f'{os.path.splitext(os.path.basename(MODEL_BODY))[0]}_n_batch.onnx',
     )

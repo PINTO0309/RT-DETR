@@ -51,10 +51,11 @@ def main(args, ):
 
     dynamic_axes = {
         'images': {0: 'N', },
-        'orig_target_sizes': {0: 'N'}
+        # 'orig_target_sizes': {0: 'N'},
+        'label_xyxy_score': {0: 'N', },
     }
 
-    output_file = f'{os.path.splitext(os.path.basename(args.config))[0]}.onnx'
+    output_file = f'{os.path.splitext(os.path.basename(args.config))[0]}_{args.query}query.onnx'
 
     torch.onnx.export(
         model,
@@ -65,6 +66,17 @@ def main(args, ):
         # output_names=['labels', 'boxes', 'scores'],
         output_names=['label_xyxy_score'],
         dynamic_axes=dynamic_axes if args.dynamic_batch else None,
+        opset_version=16,
+    )
+    torch.onnx.export(
+        model,
+        (data, size),
+        f'{os.path.splitext(os.path.basename(output_file))[0]}_n_batch.onnx',
+        # input_names=['images', 'orig_target_sizes'],
+        input_names=['images'],
+        # output_names=['labels', 'boxes', 'scores'],
+        output_names=['label_xyxy_score'],
+        dynamic_axes=dynamic_axes,
         opset_version=16,
     )
 
@@ -80,8 +92,13 @@ def main(args, ):
         dynamic: bool = args.dynamic_batch
         # input_shapes = {'images': [1, 3, 640, 640], 'orig_target_sizes': [1, 2]} if dynamic else None
         input_shapes = {'images': data.shape, 'orig_target_sizes': size.shape} if dynamic else None
+
         onnx_model_simplify, check = onnxsim.simplify(output_file, input_shapes=input_shapes, dynamic_input_shape=dynamic)
         onnx.save(onnx_model_simplify, output_file)
+        print(f'Simplify onnx model {check}...')
+
+        onnx_model_simplify, check = onnxsim.simplify(f'{os.path.splitext(os.path.basename(output_file))[0]}_n_batch.onnx')
+        onnx.save(onnx_model_simplify, f'{os.path.splitext(os.path.basename(output_file))[0]}_n_batch.onnx')
         print(f'Simplify onnx model {check}...')
 
 
@@ -94,6 +111,7 @@ if __name__ == '__main__':
     parser.add_argument('--check',  action='store_true', default=False,)
     parser.add_argument('--simplify',  action='store_true', default=False,)
     parser.add_argument('--dynamic_batch',  action='store_true', default=False,)
+    parser.add_argument('--query', '-q', type=int, default=300)
 
     args = parser.parse_args()
 

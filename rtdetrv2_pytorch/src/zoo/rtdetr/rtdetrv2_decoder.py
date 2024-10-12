@@ -447,7 +447,9 @@ class RTDETRTransformerv2(nn.Module):
         for i, feat in enumerate(proj_feats):
             _, _, h, w = feat.shape
             # [b, c, h, w] -> [b, h*w, c]
-            feat_flatten.append(feat.flatten(2).permute(0, 2, 1))
+            n,c,h,w = feat.shape
+            # feat_flatten.append(feat.flatten(2).permute(0, 2, 1))
+            feat_flatten.append(feat.reshape([n,c,h*w]).permute(0, 2, 1))
             # [num_levels, 2]
             spatial_shapes.append([h, w])
         # [b, l, c]
