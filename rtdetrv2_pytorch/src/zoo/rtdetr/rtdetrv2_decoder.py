@@ -1,15 +1,15 @@
 """Copyright(c) 2023 lyuwenyu. All Rights Reserved.
 """
 
-import math 
-import copy 
+import math
+import copy
 import functools
 from collections import OrderedDict
 
-import torch 
-import torch.nn as nn 
-import torch.nn.functional as F 
-import torch.nn.init as init 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.nn.init as init
 from typing import List
 
 from .denoising import get_contrastive_denoising_training_group
@@ -37,11 +37,11 @@ class MLP(nn.Module):
 
 class MSDeformableAttention(nn.Module):
     def __init__(
-        self, 
-        embed_dim=256, 
-        num_heads=8, 
-        num_levels=4, 
-        num_points=4, 
+        self,
+        embed_dim=256,
+        num_heads=8,
+        num_levels=4,
+        num_points=4,
         method='default',
         offset_scale=0.5,
     ):
@@ -60,7 +60,7 @@ class MSDeformableAttention(nn.Module):
             num_points_list = [num_points for _ in range(num_levels)]
 
         self.num_points_list = num_points_list
-        
+
         num_points_scale = [1/n for n in num_points_list for _ in range(n)]
         self.register_buffer('num_points_scale', torch.tensor(num_points_scale, dtype=torch.float32))
 
@@ -75,7 +75,7 @@ class MSDeformableAttention(nn.Module):
         self.value_proj = nn.Linear(embed_dim, embed_dim)
         self.output_proj = nn.Linear(embed_dim, embed_dim)
 
-        self.ms_deformable_attn_core = functools.partial(deformable_attention_core_func_v2, method=self.method) 
+        self.ms_deformable_attn_core = functools.partial(deformable_attention_core_func_v2, method=self.method)
 
         self._reset_parameters()
 
@@ -189,7 +189,7 @@ class TransformerDecoderLayer(nn.Module):
         self.linear2 = nn.Linear(dim_feedforward, d_model)
         self.dropout4 = nn.Dropout(dropout)
         self.norm3 = nn.LayerNorm(d_model)
-        
+
         self._reset_parameters()
 
     def _reset_parameters(self):
@@ -219,10 +219,10 @@ class TransformerDecoderLayer(nn.Module):
 
         # cross attention
         target2 = self.cross_attn(\
-            self.with_pos_embed(target, query_pos_embed), 
-            reference_points, 
-            memory, 
-            memory_spatial_shapes, 
+            self.with_pos_embed(target, query_pos_embed),
+            reference_points,
+            memory,
+            memory_spatial_shapes,
             memory_mask)
         target = target + self.dropout2(target2)
         target = self.norm2(target)
@@ -281,8 +281,10 @@ class TransformerDecoder(nn.Module):
             ref_points = inter_ref_bbox
             ref_points_detach = inter_ref_bbox.detach()
 
-        return torch.stack(dec_out_bboxes), torch.stack(dec_out_logits)
-
+        if len(dec_out_logits) > 1:
+            return torch.stack(dec_out_bboxes), torch.stack(dec_out_logits)
+        else:
+            return dec_out_bboxes[0], dec_out_logits[0]
 
 @register()
 class RTDETRTransformerv2(nn.Module):
@@ -307,14 +309,14 @@ class RTDETRTransformerv2(nn.Module):
                  learn_query_content=False,
                  eval_spatial_size=None,
                  eval_idx=-1,
-                 eps=1e-2, 
-                 aux_loss=True, 
-                 cross_attn_method='default', 
+                 eps=1e-2,
+                 aux_loss=True,
+                 cross_attn_method='default',
                  query_select_method='default'):
         super().__init__()
         assert len(feat_channels) <= num_levels
         assert len(feat_strides) == len(feat_channels)
-        
+
         for _ in range(num_levels - len(feat_strides)):
             feat_strides.append(feat_strides[-1] * 2)
 
@@ -346,7 +348,7 @@ class RTDETRTransformerv2(nn.Module):
         self.num_denoising = num_denoising
         self.label_noise_ratio = label_noise_ratio
         self.box_noise_scale = box_noise_scale
-        if num_denoising > 0: 
+        if num_denoising > 0:
             self.denoising_class_embed = nn.Embedding(num_classes+1, hidden_dim, padding_idx=num_classes)
             init.normal_(self.denoising_class_embed.weight[:-1])
 
@@ -387,7 +389,7 @@ class RTDETRTransformerv2(nn.Module):
             self.register_buffer('valid_mask', valid_mask)
 
         self._reset_parameters()
-        
+
     def _reset_parameters(self):
         bias = bias_init_with_prob(0.01)
         init.constant_(self.enc_score_head.bias, bias)
@@ -398,7 +400,7 @@ class RTDETRTransformerv2(nn.Module):
             init.constant_(_cls.bias, bias)
             init.constant_(_reg.layers[-1].weight, 0)
             init.constant_(_reg.layers[-1].bias, 0)
-        
+
         init.xavier_uniform_(self.enc_output[0].weight)
         if self.learn_query_content:
             init.xavier_uniform_(self.tgt_embed.weight)
@@ -412,7 +414,7 @@ class RTDETRTransformerv2(nn.Module):
         for in_channels in feat_channels:
             self.input_proj.append(
                 nn.Sequential(OrderedDict([
-                    ('conv', nn.Conv2d(in_channels, self.hidden_dim, 1, bias=False)), 
+                    ('conv', nn.Conv2d(in_channels, self.hidden_dim, 1, bias=False)),
                     ('norm', nn.BatchNorm2d(self.hidden_dim,))])
                 )
             )
@@ -494,8 +496,8 @@ class RTDETRTransformerv2(nn.Module):
             valid_mask = self.valid_mask
 
         # memory = torch.where(valid_mask, memory, 0)
-        # TODO fix type error for onnx export 
-        memory = valid_mask.to(memory.dtype) * memory  
+        # TODO fix type error for onnx export
+        memory = valid_mask.to(memory.dtype) * memory
 
         output_memory :torch.Tensor = self.enc_output(memory)
         enc_outputs_logits :torch.Tensor = self.enc_score_head(output_memory)
@@ -504,26 +506,26 @@ class RTDETRTransformerv2(nn.Module):
         enc_topk_bboxes_list, enc_topk_logits_list = [], []
         enc_topk_memory, enc_topk_logits, enc_topk_bbox_unact = \
             self._select_topk(output_memory, enc_outputs_logits, enc_outputs_coord_unact, self.num_queries)
-            
+
         if self.training:
             enc_topk_bboxes = F.sigmoid(enc_topk_bbox_unact)
             enc_topk_bboxes_list.append(enc_topk_bboxes)
             enc_topk_logits_list.append(enc_topk_logits)
 
-        # if self.num_select_queries != self.num_queries:            
+        # if self.num_select_queries != self.num_queries:
         #     raise NotImplementedError('')
 
         if self.learn_query_content:
             content = self.tgt_embed.weight.unsqueeze(0).tile([memory.shape[0], 1, 1])
         else:
             content = enc_topk_memory.detach()
-            
+
         enc_topk_bbox_unact = enc_topk_bbox_unact.detach()
-        
+
         if denoising_bbox_unact is not None:
             enc_topk_bbox_unact = torch.concat([denoising_bbox_unact, enc_topk_bbox_unact], dim=1)
             content = torch.concat([denoising_logits, content], dim=1)
-        
+
         return content, enc_topk_bbox_unact, enc_topk_bboxes_list, enc_topk_logits_list
 
     def _select_topk(self, memory: torch.Tensor, outputs_logits: torch.Tensor, outputs_coords_unact: torch.Tensor, topk: int):
@@ -536,15 +538,15 @@ class RTDETRTransformerv2(nn.Module):
 
         elif self.query_select_method == 'agnostic':
             _, topk_ind = torch.topk(outputs_logits.squeeze(-1), topk, dim=-1)
-        
+
         topk_ind: torch.Tensor
 
         topk_coords = outputs_coords_unact.gather(dim=1, \
             index=topk_ind.unsqueeze(-1).repeat(1, 1, outputs_coords_unact.shape[-1]))
-        
+
         topk_logits = outputs_logits.gather(dim=1, \
             index=topk_ind.unsqueeze(-1).repeat(1, 1, outputs_logits.shape[-1]))
-        
+
         topk_memory = memory.gather(dim=1, \
             index=topk_ind.unsqueeze(-1).repeat(1, 1, memory.shape[-1]))
 
@@ -554,16 +556,16 @@ class RTDETRTransformerv2(nn.Module):
     def forward(self, feats, targets=None):
         # input projection and embedding
         memory, spatial_shapes = self._get_encoder_input(feats)
-        
+
         # prepare denoising training
         if self.training and self.num_denoising > 0:
             denoising_logits, denoising_bbox_unact, attn_mask, dn_meta = \
                 get_contrastive_denoising_training_group(targets, \
-                    self.num_classes, 
-                    self.num_queries, 
-                    self.denoising_class_embed, 
-                    num_denoising=self.num_denoising, 
-                    label_noise_ratio=self.label_noise_ratio, 
+                    self.num_classes,
+                    self.num_queries,
+                    self.denoising_class_embed,
+                    num_denoising=self.num_denoising,
+                    label_noise_ratio=self.label_noise_ratio,
                     box_noise_scale=self.box_noise_scale, )
         else:
             denoising_logits, denoising_bbox_unact, attn_mask, dn_meta = None, None, None, None
@@ -586,7 +588,11 @@ class RTDETRTransformerv2(nn.Module):
             dn_out_bboxes, out_bboxes = torch.split(out_bboxes, dn_meta['dn_num_split'], dim=2)
             dn_out_logits, out_logits = torch.split(out_logits, dn_meta['dn_num_split'], dim=2)
 
-        out = {'pred_logits': out_logits[-1], 'pred_boxes': out_bboxes[-1]}
+        if len(out_logits.shape) == 4:
+            out = {'pred_logits': out_logits[-1], 'pred_boxes': out_bboxes[-1]}
+        else:
+            out = {'pred_logits': out_logits, 'pred_boxes': out_bboxes}
+
 
         if self.training and self.aux_loss:
             out['aux_outputs'] = self._set_aux_loss(out_logits[:-1], out_bboxes[:-1])

@@ -59,7 +59,8 @@ def main(args, ):
         (data, size),
         output_file,
         input_names=['images', 'orig_target_sizes'],
-        output_names=['labels', 'boxes', 'scores'],
+        # output_names=['labels', 'boxes', 'scores'],
+        output_names=['label_xyxy_score'],
         dynamic_axes=dynamic_axes if args.dynamic_batch else None,
         opset_version=16,
     )

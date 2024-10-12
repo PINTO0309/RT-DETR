@@ -20,6 +20,20 @@
             "args": [
                 "wholebody25"
             ]
+        },
+        {
+            "name": "onnx_export",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--config", "rtdetrv2_pytorch/configs/rtdetrv2/rtdetrv2_r18vd_120e_wholebody25.yml",
+                "--resume", "rtdetrv2_pytorch/best-s.pth",
+                "--check",
+                "--simplify",
+            ]
         }
     ]
 }
