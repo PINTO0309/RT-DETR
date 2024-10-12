@@ -31,6 +31,7 @@
             "args": [
                 "--config", "rtdetrv2_pytorch/configs/rtdetrv2/rtdetrv2_r18vd_120e_wholebody25.yml",
                 "--resume", "rtdetrv2_pytorch/best-s.pth",
+                // "--size", "480", "640",
                 "--check",
                 "--simplify",
             ]

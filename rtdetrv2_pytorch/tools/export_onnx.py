@@ -38,13 +38,15 @@ def main(args, ):
 
         def forward(self, images, orig_target_sizes):
             outputs = self.model(images)
-            outputs = self.postprocessor(outputs, orig_target_sizes)
+            # outputs = self.postprocessor(outputs, orig_target_sizes)
+            outputs = self.postprocessor(outputs)
             return outputs
 
     model = Model()
 
-    data = torch.rand(1, 3, 640, 640)
-    size = torch.tensor([[640, 640]])
+    h, w = args.size
+    data = torch.rand(1, 3, h, w)
+    size = torch.tensor([[h, w]])
     _ = model(data, size)
 
     dynamic_axes = {
@@ -58,7 +60,8 @@ def main(args, ):
         model,
         (data, size),
         output_file,
-        input_names=['images', 'orig_target_sizes'],
+        # input_names=['images', 'orig_target_sizes'],
+        input_names=['images'],
         # output_names=['labels', 'boxes', 'scores'],
         output_names=['label_xyxy_score'],
         dynamic_axes=dynamic_axes if args.dynamic_batch else None,
@@ -87,6 +90,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', '-c', type=str, )
     parser.add_argument('--resume', '-r', type=str, )
+    parser.add_argument('--size', '-s', nargs="*", default=[640,640], type=int, )
     parser.add_argument('--check',  action='store_true', default=False,)
     parser.add_argument('--simplify',  action='store_true', default=False,)
     parser.add_argument('--dynamic_batch',  action='store_true', default=False,)
