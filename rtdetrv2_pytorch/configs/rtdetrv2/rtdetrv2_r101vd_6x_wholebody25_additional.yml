@@ -23,7 +23,7 @@ HybridEncoder:
 RTDETRTransformerv2:
   feat_channels: [384, 384, 384]
 
-epoches: 75
+epoches: 82
 
 optimizer:
   type: AdamW
