@@ -1,11 +1,11 @@
 """Copyright(c) 2023 lyuwenyu. All Rights Reserved.
 """
 
-import time 
+import time
 import json
 import datetime
 
-import torch 
+import torch
 
 from ..misc import dist_utils, profiler_utils
 
@@ -14,7 +14,7 @@ from .det_engine import train_one_epoch, evaluate
 
 
 class DetSolver(BaseSolver):
-    
+
     def fit(self, ):
         print("Start training")
         self.train()
@@ -27,32 +27,34 @@ class DetSolver(BaseSolver):
 
         start_time = time.time()
         start_epcoch = self.last_epoch + 1
-        
+
+        print(f'@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ args.epoches: {args.epoches}')
         for epoch in range(start_epcoch, args.epoches):
 
             self.train_dataloader.set_epoch(epoch)
             # self.train_dataloader.dataset.set_epoch(epoch)
             if dist_utils.is_dist_available_and_initialized():
                 self.train_dataloader.sampler.set_epoch(epoch)
-            
+
             train_stats = train_one_epoch(
-                self.model, 
-                self.criterion, 
-                self.train_dataloader, 
-                self.optimizer, 
-                self.device, 
-                epoch, 
-                max_norm=args.clip_max_norm, 
-                print_freq=args.print_freq, 
-                ema=self.ema, 
-                scaler=self.scaler, 
+                self.model,
+                self.criterion,
+                self.train_dataloader,
+                self.optimizer,
+                self.device,
+                epoch,
+                max_norm=args.clip_max_norm,
+                epoches=args.epoches,
+                print_freq=args.print_freq,
+                ema=self.ema,
+                scaler=self.scaler,
                 lr_warmup_scheduler=self.lr_warmup_scheduler,
                 writer=self.writer
             )
 
             if self.lr_warmup_scheduler is None or self.lr_warmup_scheduler.finished():
                 self.lr_scheduler.step()
-            
+
             self.last_epoch += 1
 
             if self.output_dir:
@@ -65,20 +67,20 @@ class DetSolver(BaseSolver):
 
             module = self.ema.module if self.ema else self.model
             test_stats, coco_evaluator = evaluate(
-                module, 
-                self.criterion, 
-                self.postprocessor, 
-                self.val_dataloader, 
-                self.evaluator, 
+                module,
+                self.criterion,
+                self.postprocessor,
+                self.val_dataloader,
+                self.evaluator,
                 self.device
             )
 
-            # TODO 
+            # TODO
             for k in test_stats:
                 if self.writer and dist_utils.is_main_process():
                     for i, v in enumerate(test_stats[k]):
                         self.writer.add_scalar(f'Test/{k}_{i}'.format(k), v, epoch)
-            
+
                 if k in best_stat:
                     best_stat['epoch'] = epoch if test_stats[k][0] > best_stat[k] else best_stat['epoch']
                     best_stat[k] = max(best_stat[k], test_stats[k][0])
@@ -120,12 +122,12 @@ class DetSolver(BaseSolver):
 
     def val(self, ):
         self.eval()
-        
+
         module = self.ema.module if self.ema else self.model
         test_stats, coco_evaluator = evaluate(module, self.criterion, self.postprocessor,
                 self.val_dataloader, self.evaluator, self.device)
-                
+
         if self.output_dir:
             dist_utils.save_on_master(coco_evaluator.coco_eval["bbox"].eval, self.output_dir / "eval.pth")
-        
+
         return
