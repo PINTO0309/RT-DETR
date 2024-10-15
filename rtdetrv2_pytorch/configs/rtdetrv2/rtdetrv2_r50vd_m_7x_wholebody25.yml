@@ -17,7 +17,7 @@ RTDETRTransformerv2:
   eval_idx: 2 # use 3th decoder layer to eval
 
 
-epoches: 84
+epoches: 120
 
 optimizer:
   type: AdamW
@@ -38,6 +38,6 @@ train_dataloader:
   dataset:
     transforms:
       policy:
-        epoch: 81
+        epoch: 72
   collate_fn:
-    stop_epoch: 81
+    stop_epoch: 72

@@ -51,7 +51,7 @@ if __name__ == "__main__":
         '-m',
         '--model_body',
         type=str,
-        default="rtdetrv2_r18vd_120e_wholebody25_300query.onnx",
+        default="rtdetrv2_r101vd_6x_wholebody25_1250query.onnx",
         help='Model body'
     )
     args = parser.parse_args()

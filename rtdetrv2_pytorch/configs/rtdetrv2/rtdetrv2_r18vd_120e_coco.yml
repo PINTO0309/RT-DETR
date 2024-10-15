@@ -27,18 +27,18 @@ RTDETRTransformerv2:
   num_layers: 3
 
 
-epoches: 120 
+epoches: 120
 
 optimizer:
   type: AdamW
   params:
-    - 
+    -
       params: '^(?=.*(?:norm|bn)).*$'
       weight_decay: 0.
 
 
-train_dataloader: 
-  dataset: 
+train_dataloader:
+  dataset:
     transforms:
       policy:
         epoch: 117
