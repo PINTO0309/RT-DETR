@@ -23,6 +23,7 @@ HybridEncoder:
 RTDETRTransformerv2:
   feat_channels: [384, 384, 384]
 
+epoches: 75
 
 optimizer:
   type: AdamW
@@ -42,6 +43,6 @@ train_dataloader:
   dataset:
     transforms:
       policy:
-        epoch: 74
+        epoch: 72
   collate_fn:
-    stop_epoch: 74
+    stop_epoch: 72
