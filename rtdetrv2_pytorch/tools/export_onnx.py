@@ -111,7 +111,7 @@ if __name__ == '__main__':
     parser.add_argument('--check',  action='store_true', default=False,)
     parser.add_argument('--simplify',  action='store_true', default=False,)
     parser.add_argument('--dynamic_batch',  action='store_true', default=False,)
-    parser.add_argument('--query', '-q', type=int, default=300)
+    parser.add_argument('--query', '-q', type=int, default=1250)
 
     args = parser.parse_args()
 
